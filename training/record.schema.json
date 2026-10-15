@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.gemma/training/record.schema.json",
+  "title": "Gemma SWE post-training candidate",
+  "type": "object",
+  "required": ["record_id", "task", "source", "messages", "patch", "verification", "evaluation_only"],
+  "properties": {
+    "record_id": {"type": "string", "minLength": 1},
+    "task": {
+      "type": "object",
+      "required": ["task_id", "repo", "prompt"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "repo": {"type": "string", "minLength": 1},
+        "prompt": {"type": "string", "minLength": 1},
+        "repo_snapshot": {"type": "string"},
+        "test_command": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      },
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "reference", "license", "rights_review", "allowed_modes", "reasoning_visibility"],
+      "properties": {
+        "kind": {"enum": ["student_rollout", "authorized_teacher", "open_patch", "synthetic_solver"]},
+        "reference": {"type": "string", "minLength": 1},
+        "license": {"type": "string", "minLength": 1},
+        "rights_review": {"enum": ["approved", "pending", "excluded"]},
+        "allowed_modes": {"type": "array", "uniqueItems": true, "items": {"enum": ["sft", "grpo", "preference"]}},
+        "reasoning_visibility": {"enum": ["observable_trace", "authorized_explicit_rationale", "none"]}
+      },
+      "additionalProperties": true
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": {"enum": ["system", "user", "assistant", "tool"]},
+          "content": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "explicit_rationale": {
+      "type": "string",
+      "description": "Teacher-authored, user-facing step-by-step explanation. Must not contain provider-private hidden reasoning."
+    },
+    "rationale_mode": {"enum": ["none", "brief", "detailed"]},
+    "patch": {"type": "string", "minLength": 1},
+    "verification": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["passed", "failed", "timeout", "unverified"]},
+        "patch_replayable": {"type": "boolean"},
+        "test_exit_code": {"type": ["integer", "null"]},
+        "verifier_ref": {"type": "string"},
+        "failure_mode": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "evaluation_only": {"type": "boolean"},
+    "benchmark_split": {"enum": ["train", "validation", "test", "hidden", "evaluation"]}
+  },
+  "additionalProperties": true
+}

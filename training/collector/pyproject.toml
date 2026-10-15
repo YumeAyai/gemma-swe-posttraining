@@ -1,0 +1,9 @@
+[project]
+name = "gemma-swe-teacher-collector"
+version = "0.1.0"
+description = "Blind teacher-data collector for the public Gemma SWE task set"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false

@@ -1,0 +1,13 @@
+[project]
+name = "gemma-swe-posttraining"
+version = "0.1.0"
+description = "Auditable data collection and SFT/GRPO preparation for Gemma SWE agents"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
