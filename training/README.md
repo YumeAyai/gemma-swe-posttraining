@@ -24,6 +24,16 @@ Claude 或其他闭源 teacher 的使用不能仅凭传闻推断允许或禁止�
 
 ### 用 teacher 处理这 129 题
 
+#### 同 harness 的教师 rollout notebook
+
+[`notebooks/teacher-rollout-same-harness.ipynb`](../notebooks/teacher-rollout-same-harness.ipynb) 从当前六分钟比赛配置打包 agent prompt、工具 schema、代码图/embedding 查找、隔离 sandbox、补丁提取和测试验证；只把 ADK 的模型注册别名映射到用户配置的 LiteLLM provider。教师不加载学生 LoRA，因此教师的真实工具调用/返回轨迹与学生动作协议对齐。
+
+Notebook 默认只选 `requests_7433`、`httpx_3672`、`fastapi_15745`、`rich_3064` 四个公开样本，且 `COLLECT_TEACHER_ROLLOUTS=False`，不会默认发起外部请求。配置 `TEACHER_MODEL_SPEC`（例如 `openai/<model-id>`）、可选 `TEACHER_API_BASE`，在 Kaggle Secrets 添加 `TEACHER_API_KEY`，检查服务条款和数据传输要求后再显式打开收集。只有公开训练题和对应公开快照会发给教师服务；不要附加或发送隐藏评测题、隐藏标签或私有仓库内容。Notebook metadata 保持 CPU-only，并开启 internet 仅为允许显式启用的教师 API 调用。
+
+确认四题轨迹和成本后，将 `SELECTED_TASK_IDS` 设为 `None` 才会选全体 129 个公开任务。预算仍使用当前 student harness 的 6 分钟/32 次工具调用上限；有意保持工具和预算策略可比。完成后下载 `teacher_rollout_same_harness_v1_observable_logs.zip`，它包含经 sanitizer 处理的可见消息、工具 I/O、补丁、测试状态、逐题日志和 manifest，不包含 provider 私有隐藏推理字段。它是原始 rollout 工件，尚不是可直接训练的 canonical 数据；仍需 provenance/rights 审核及补丁独立重放验证。
+
+该 notebook 通过 LiteLLM-compatible provider 替换模型后端，并保留同一个 `swegemma.Evaluator` 执行/验证层。它不是竞赛提交 notebook，不会创建提交 ZIP。`TEACHER_MODEL_SPEC` 必须指向受 ADK/LiteLLM runtime 支持且能正确处理 function/tool calling 的模型 endpoint。
+
 对每题先冻结 `base_commit` 和工具 schema。Teacher 只收到 issue、hints 和仓库快照，不给 `patch`/`test_patch`；采集多条可观察轨迹（工具名、参数、返回摘要、编辑 diff、测试选择、最终 diff），原始输出按 task/teacher/prompt 版本保存。随后独立做两段验证：`test_patch` 在原始基线上应失败；teacher patch 应能应用并让验证测试通过。验证结果再用公开 `patch` 做行为对照/错误定位，不将参考答案提前泄露给 teacher。
 
 先从官方 JSONL 导出 blind prompt manifest（字段层面剔除 reference patch/test patch）：
@@ -74,7 +84,7 @@ uv run collector.py \
 
 任务 commit 与每仓库唯一 graph 索引不一致时，默认不提供 graph 代码上下文；显式打开 `--allow-repo-graph-fallback` 才回退到该仓库索引，并在输入/JSONL 中标注索引 revision 与 `graph_matches_task_commit=false`。这些摘录只能帮助定位，不能当成题目快照源代码；teacher patch 必须在对应的确切 task snapshot 上独立重放和验证。
 
-注意：当前 collector 是“盲态 patch/简短策略摘要候选”采集，不是 agent 沙箱 rollout；它不会对仓库执行 `read_file`/`edit_file`/测试，也不会生成真实工具调用轨迹。产物全部是未验证候选，`rights_review=pending`，不能直接喂训练。需要先在隔离环境重放补丁、运行目标测试，并通过来源/条款审核，再转换成 canonical record。要采集实际工具轨迹，应另接有隔离容器的 harness runner；不可把模型自述当成真实工具观察。
+注意：命令行 collector 仍是“盲态 patch/简短策略摘要候选”采集，不是 agent 沙箱 rollout；它不会对仓库执行 `read_file`/`edit_file`/测试，也不会生成真实工具调用轨迹。产物全部是未验证候选，`rights_review=pending`，不能直接喂训练。需要先在隔离环境重放补丁、运行目标测试，并通过来源/条款审核，再转换成 canonical record。要采集真实工具轨迹，使用上面的 same-harness notebook；不可把模型自述当成真实工具观察。
 
 每道题可产出三类不同监督，不要混成一条：
 
